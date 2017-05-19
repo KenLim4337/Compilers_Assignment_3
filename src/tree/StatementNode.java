@@ -194,13 +194,22 @@ public abstract class StatementNode {
         }
     }
     /** Tree node representing a "call" statement. */
+    //Edit to handle parameters and defaults
     public static class CallNode extends StatementNode {
         private String id;
+        private List<ExpNode.ActualParameterNode> params;
         private SymEntry.ProcedureEntry procEntry;
+        
+        public CallNode( Location loc, String id , List<ExpNode.ActualParameterNode> list) {
+            super( loc );
+            this.id = id;
+            this.params = list;
+        }
         public CallNode( Location loc, String id ) {
             super( loc );
             this.id = id;
         }
+        
         @Override
         public void accept( StatementVisitor visitor ) {
             visitor.visitCallNode( this );
@@ -218,12 +227,59 @@ public abstract class StatementNode {
         public void setEntry(SymEntry.ProcedureEntry entry) {
             this.procEntry = entry;
         }
+        //New
+        public List<ExpNode.ActualParameterNode> getParams() {
+            return this.params;
+        }
+        public void setParams(List<ExpNode.ActualParameterNode> newParams) {
+            this.params = newParams;
+        }
+        
+        
         @Override
         public String toString( int level ) {
-            String s = "CALL " + id;
+            String s = "CALL " + id + "(";
+            
+            for (ExpNode.ActualParameterNode p: this.params) {
+                s += p + ", ";
+            }
+            
+            s = s.substring(0, s.length()-2);
+            
             return s + ")";
         }
     }
+    
+    //New
+    public static class ReturnNode extends StatementNode {
+        
+        ExpNode condition;
+        
+        public ReturnNode( Location loc, ExpNode cond ) {
+            super( loc );
+            this.condition = cond;
+        }
+        @Override
+        public void accept( StatementVisitor visitor ) {
+            visitor.visitReturnNode( this );
+        }
+        @Override
+        public Code genCode( StatementTransform<Code> visitor ) {
+            return visitor.visitReturnNode( this );
+        }
+        
+        public ExpNode getCond() {
+            return condition;
+        }
+        
+        @Override
+        public String toString( int level ) {
+            String s = "return " + condition.toString();
+            return s;
+        }
+    }
+    
+    
     /** Tree node representing a statement list. */
     public static class ListNode extends StatementNode {
         private List<StatementNode> statements;

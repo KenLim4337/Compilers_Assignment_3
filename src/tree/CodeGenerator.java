@@ -118,6 +118,7 @@ public class CodeGenerator implements DeclVisitor, StatementTransform<Code>,
         endGen( "Write" );
         return code;
     }
+    
     /** Generate code for a "call" statement. */
     public Code visitCallNode( StatementNode.CallNode node ) {
         beginGen( "Call" );
@@ -131,6 +132,16 @@ public class CodeGenerator implements DeclVisitor, StatementTransform<Code>,
         endGen( "Call" );
         return code;
     }
+    
+    //Return
+    public Code visitReturnNode( StatementNode.ReturnNode node ) {
+        beginGen( "Return" );
+        Code code = new Code();
+        endGen( "Return" );
+        return code;
+    }
+    
+    
     /** Generate code for a statement list */
     public Code visitStatementListNode( StatementNode.ListNode node ) {
         beginGen( "StatementList" );
@@ -341,6 +352,23 @@ public class CodeGenerator implements DeclVisitor, StatementTransform<Code>,
         // Widening doesn't require anything extra
         Code code = node.getExp().genCode( this );
         endGen( "WidenSubrange" );
+        return code;
+    }
+    
+    //Actual Param Code
+    public Code visitActualParameterNode (ExpNode.ActualParameterNode node) {
+        beginGen("ActualParameter");
+        //New stuff....or not
+        Code code = node.getCondition().genCode( this );
+        
+        endGen("ActualParameter");
+        return code;
+    }
+    
+    public Code visitCallerNode(ExpNode.CallerNode node) {
+        beginGen ("Caller");
+        Code code  = new Code();
+        endGen("Caller");
         return code;
     }
 

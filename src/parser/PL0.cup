@@ -155,13 +155,14 @@ non terminal                  VarDeclSeq,
                               VarDecl;
 non terminal DeclNode.ProcedureNode  ProcedureDef;
 non terminal SymEntry.ProcedureEntry ProcedureHead;
-non terminal SymEntry.TypeEntry FormalParam;
+non terminal SymEntry.ParamEntry FormalParam;
 
-non terminal List<SymEntry.TypeEntry> FormalParams,
+non terminal List<SymEntry.ParamEntry> FormalParams,
 		                      FormalParamList;
 		                      
-non terminal List<ExpNode>	  ActualParams,
+non terminal List<ExpNode.ActualParameterNode>	  ActualParams,
                               ActualParamList;
+non terminal ExpNode.ActualParameterNode ActualParam;
 non terminal StatementNode.ListNode StatementList;
 non terminal StatementNode    Statement,
                               CompoundStatement;
@@ -170,8 +171,7 @@ non terminal ExpNode          Condition,
                               Exp,
                               Term,
                               Factor,
-                              Default,
-                              ActualParam;
+                              Default;
 non terminal Operator         Relation,
                               AddOp,
                               MulOp,
@@ -377,9 +377,22 @@ ProcedureDef ::= ProcedureHead:procEntry EQUALS Block:b
 ProcedureHead ::= KW_PROCEDURE IDENTIFIER:id
             LPAREN FormalParamList:pl RPAREN ReturnType:ret
         {: 
+			//Replace procedure entry with entry that overloads procedure type
+
             SymEntry.ProcedureEntry procEntry;
-            /* Add an entry for the procedure to the current scope */
-            procEntry = currentScope.addProcedure( id, idxleft );
+           
+			//Declare new procedure type
+			Type.ProcedureType nt = new Type.ProcedureType();
+
+			if (ret != null) {
+				nt.setResultType(ret);
+			}
+
+			nt.setFormalParams(pl);			
+
+			 /* Add an entry for the procedure to the current scope */
+            procEntry = currentScope.addProcedure( id, idxleft , nt);
+			
             if( procEntry == null ) {
                 errors.error( id + " already declared", idxleft );
                 /* Create a dummy symbol table entry.
@@ -387,9 +400,22 @@ ProcedureHead ::= KW_PROCEDURE IDENTIFIER:id
                 procEntry = new SymEntry.ProcedureEntry( id, idxleft );
                 procEntry.setScope( currentScope );
             }
+
             /* Create a new scope for the symbols local to
              * the procedure. */
             currentScope = currentScope.newScope( procEntry );
+	
+			//Add formal param entries into the current scope (in procEntry) using addEntry
+			for(SymEntry sym: pl) {
+				SymEntry addParam;
+				addParam = currentScope.addEntry(sym);
+				if(addParam == null) {
+					errors.error(sym.getIdent() + " repeated", sym.getLocation());
+				}
+			}
+			
+			procEntry.setLocalScope(currentScope);
+
             RESULT = procEntry;
         :}
     |  KW_PROCEDURE IDENTIFIER:id error
@@ -407,7 +433,7 @@ ProcedureHead ::= KW_PROCEDURE IDENTIFIER:id
 /* To allow for the addition of procedure parameters. */
 FormalParamList ::= /* empty */
 		{:
-			RESULT = new ArrayList<SymEntry.TypeEntry>();
+			RESULT = new ArrayList<SymEntry.ParamEntry>();
 		:}
 	| FormalParams:fp
 		{:
@@ -417,7 +443,7 @@ FormalParamList ::= /* empty */
 
 FormalParams ::= FormalParam:p
 		{:
-			RESULT = new ArrayList<SymEntry.TypeEntry>();
+			RESULT = new ArrayList<SymEntry.ParamEntry>();
             RESULT.add(p);
 		:}
 	| FormalParams:fl COMMA FormalParam:p
@@ -428,16 +454,23 @@ FormalParams ::= FormalParam:p
 	;
 
 //Single formal parameter
-FormalParam ::= IDENTIFIER:id COLON TypeIdentifier:type Default:d
+FormalParam ::= IDENTIFIER:id COLON TypeIdentifier:t Default:d
 		{:
-			
+			Type.ReferenceType nt = new Type.ReferenceType(t);
+
+			//If no default, use param constructor without default
+			if (d == null) {
+				RESULT = new SymEntry.ParamEntry(id, idxleft, nt);
+			} else {
+				RESULT = new SymEntry.ParamEntry(id, idxleft, nt, d);
+			}
 		:}
 	;
 	
 //Default conditional
 Default ::= /*empty*/
 		{:
-			
+			RESULT = null;
 		:}
 	| GETS Condition:cond
 		{:
@@ -449,7 +482,7 @@ Default ::= /*empty*/
 //Handles return type optional
 ReturnType ::= /*empty*/
 		{:
-
+			RESULT = null;
 		:}
 	| COLON TypeIdentifier:type
 		{:
@@ -501,15 +534,30 @@ Statement ::= KW_WHILE Condition:c KW_DO Statement:s
        {:
           RESULT = new StatementNode.AssignmentNode( lvalxleft, lval, rval );
        :} 
-    |  KW_CALL IDENTIFIER:id LPAREN ActualParamList:pl RPAREN
+    | KW_CALL IDENTIFIER:id LPAREN ActualParamList:pl RPAREN
         {: 
+			List<String> paramIds = new ArrayList<String>();
+			
+			for (ExpNode.ActualParameterNode x: pl) {
+				if(paramIds.contains(x.getId())) {
+					errors.error(x.getId() + " repeated", x.getLocation());
+				} else {
+					paramIds.add(x.getId());
+				}
+			}
+
 			//Edit to fit parameters
-	
+			if (pl.size() > 0) {
+            	RESULT = new StatementNode.CallNode( idxleft, id , pl);
+			}	
+
             RESULT = new StatementNode.CallNode( idxleft, id );
         :}
-    | KW_RETURN Condition
+    | KW_RETURN:ret Condition:cond
     	{:
 			//New Stuff
+			RESULT = new StatementNode.ReturnNode(retxleft, cond);
+		
 		:}
     |  error:p 
         {: 
@@ -520,7 +568,7 @@ Statement ::= KW_WHILE Condition:c KW_DO Statement:s
 //Edit to form parameter list
 ActualParamList ::= /* empty */
 		{:
-		
+			RESULT = new ArrayList<ExpNode.ActualParameterNode>();
 		:}
 	| ActualParams:p
 		{:
@@ -531,18 +579,20 @@ ActualParamList ::= /* empty */
 //Form list of parameters
 ActualParams ::= ActualParam:a
 		{:
-		
+			RESULT = new ArrayList<ExpNode.ActualParameterNode>();
+            RESULT.add(a);
 		:}
 	| ActualParams:pl COMMA ActualParam:a1
 		{:
-		
+			pl.add(a1);
+			RESULT = pl;
 		:}
 	;
 
 //Single parameter
-ActualParam ::= IDENTIFIER GETS Condition
+ActualParam ::= IDENTIFIER:id GETS Condition:cond
 		{:
-		
+			RESULT = new ExpNode.ActualParameterNode(idxleft, id, cond);
 		:}
 	;
 	
@@ -663,10 +713,14 @@ Factor ::= PLUS Factor:e
             RESULT = lval;
         :}
     //Calling a thingy
-    | IDENTIFIER LPAREN ActualParams:a RPAREN
+    | IDENTIFIER:id LPAREN ActualParamList:a RPAREN
     	{:
-			//New Stuff			
-
+			//New Stuff
+			if(a.size() > 0) {
+				RESULT = new ExpNode.CallerNode(idxleft, id);
+			} else {
+				RESULT = new ExpNode.CallerNode(idxleft, id);
+			}
 		:}
     | error:e
         {:

@@ -584,7 +584,7 @@ public class StaticChecker implements DeclVisitor, StatementVisitor,
                } 
            }
         } else {
-            staticError( "Procedure identifier required", node.getLocation() );
+            staticError( node.getId() + " should be a function", node.getLocation() );
             endCheck("Caller");
             return node;
         }

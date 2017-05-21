@@ -875,6 +875,7 @@ class CUP$CUPParser$actions {
 			//Declare new procedure type
 			Type.ProcedureType nt = new Type.ProcedureType();
 
+			//Set return type if present
 			if (ret != null) {
 				nt.setResultType(ret);
 			}
@@ -905,6 +906,7 @@ class CUP$CUPParser$actions {
 				}
 			}
 			
+			//Set the local scope of the procedure to the scope with params
 			procEntry.setLocalScope(currentScope);
 
             RESULT = procEntry;
@@ -1224,22 +1226,23 @@ class CUP$CUPParser$actions {
 		Location plxright = ((java_cup.runtime.ComplexSymbolFactory.ComplexSymbol)CUP$CUPParser$stack.elementAt(CUP$CUPParser$top-1)).xright;
 		List<ExpNode.ActualParameterNode> pl = (List<ExpNode.ActualParameterNode>)((java_cup.runtime.Symbol) CUP$CUPParser$stack.elementAt(CUP$CUPParser$top-1)).value;
 		 
-			List<String> paramIds = new ArrayList<String>();
-			
-			for (ExpNode.ActualParameterNode x: pl) {
-				if(paramIds.contains(x.getId())) {
+			List<String> pid = new ArrayList<String>();			
+
+			for (ExpNode.ActualParameterNode x:pl) {
+				if(pid.contains(x.getId())) {
 					errors.error(x.getId() + " repeated", x.getLocation());
 				} else {
-					paramIds.add(x.getId());
+					pid.add(x.getId());
 				}
 			}
 
 			//Edit to fit parameters
-			if (pl.size() > 0) {
+			if (pl.size() != 0) {
             	RESULT = new StatementNode.CallNode( idxleft, id , pl);
-			}	
+			} else {
+           		RESULT = new StatementNode.CallNode( idxleft, id );
+			}
 
-            RESULT = new StatementNode.CallNode( idxleft, id );
         
               CUP$CUPParser$result = parser.getSymbolFactory().newSymbol("Statement",23, ((java_cup.runtime.Symbol)CUP$CUPParser$stack.elementAt(CUP$CUPParser$top-4)), ((java_cup.runtime.Symbol)CUP$CUPParser$stack.peek()), RESULT);
             }
@@ -1681,9 +1684,19 @@ class CUP$CUPParser$actions {
 		Location axright = ((java_cup.runtime.ComplexSymbolFactory.ComplexSymbol)CUP$CUPParser$stack.elementAt(CUP$CUPParser$top-1)).xright;
 		List<ExpNode.ActualParameterNode> a = (List<ExpNode.ActualParameterNode>)((java_cup.runtime.Symbol) CUP$CUPParser$stack.elementAt(CUP$CUPParser$top-1)).value;
 		
+			List<String> pid = new ArrayList<String>();			
+
+			for (ExpNode.ActualParameterNode x:a) {
+				if(pid.contains(x.getId())) {
+					errors.error(x.getId() + " repeated", x.getLocation());
+				} else {
+					pid.add(x.getId());
+				}
+			}
+
 			//New Stuff
-			if(a.size() > 0) {
-				RESULT = new ExpNode.CallerNode(idxleft, id);
+			if(a.size() != 0) {
+				RESULT = new ExpNode.CallerNode(idxleft, id, a);
 			} else {
 				RESULT = new ExpNode.CallerNode(idxleft, id);
 			}

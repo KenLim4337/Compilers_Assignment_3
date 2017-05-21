@@ -1,5 +1,6 @@
 package tree;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -366,6 +367,9 @@ public abstract class ExpNode {
         public String getId() {
             return this.id;
         }
+        public void setCond(ExpNode exp) {
+            this.cond = exp;
+        }
         @Override
         public ExpNode transform( ExpTransform<ExpNode> visitor ) {
             return visitor.visitActualParameterNode( this );
@@ -376,7 +380,7 @@ public abstract class ExpNode {
         }
         @Override
         public String toString() {
-            return id + " <- " + cond.toString();
+            return id + " : " + cond;
         }
     }
     
@@ -384,10 +388,39 @@ public abstract class ExpNode {
     public static class CallerNode extends ExpNode {
         /** Condition */
         private String id;
+        private List<ExpNode.ActualParameterNode> params;
+        private SymEntry.ProcedureEntry procEntry;
 
-        public CallerNode( Location loc, String id ) {
+        //Type = return type (yes the bloody return type)
+        public CallerNode( Location loc, String id, List<ExpNode.ActualParameterNode> list) {
             super( loc );
             this.id = id;
+            this.params = list;
+        }
+        public CallerNode(Location loc, String id) {
+            super( loc );
+            this.id = id;
+            this.params = new ArrayList<ExpNode.ActualParameterNode>();
+        }
+        
+        public String getId() {
+            return id;
+        }
+        public SymEntry.ProcedureEntry getEntry() {
+            return procEntry;
+        }
+        public void setEntry(SymEntry.ProcedureEntry entry) {
+            this.procEntry = entry;
+        }
+        //New
+        public List<ExpNode.ActualParameterNode> getParams() {
+            return this.params;
+        }
+        public void setParams(List<ExpNode.ActualParameterNode> newParams) {
+            this.params = newParams;
+        }
+        public void addParam(ExpNode.ActualParameterNode newParam) {
+            this.params.add(newParam);
         }
         
         @Override

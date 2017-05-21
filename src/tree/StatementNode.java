@@ -208,6 +208,7 @@ public abstract class StatementNode {
         public CallNode( Location loc, String id ) {
             super( loc );
             this.id = id;
+            this.params = new ArrayList<ExpNode.ActualParameterNode>();
         }
         
         @Override
@@ -234,7 +235,9 @@ public abstract class StatementNode {
         public void setParams(List<ExpNode.ActualParameterNode> newParams) {
             this.params = newParams;
         }
-        
+        public void addParam(ExpNode.ActualParameterNode newParam) {
+            this.params.add(newParam);
+        }
         
         @Override
         public String toString( int level ) {
@@ -270,6 +273,10 @@ public abstract class StatementNode {
         
         public ExpNode getCond() {
             return condition;
+        }
+        
+        public void setCond(ExpNode exp) {
+            this.condition = exp;
         }
         
         @Override

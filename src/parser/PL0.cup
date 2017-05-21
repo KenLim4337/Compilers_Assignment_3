@@ -384,6 +384,7 @@ ProcedureHead ::= KW_PROCEDURE IDENTIFIER:id
 			//Declare new procedure type
 			Type.ProcedureType nt = new Type.ProcedureType();
 
+			//Set return type if present
 			if (ret != null) {
 				nt.setResultType(ret);
 			}
@@ -414,6 +415,7 @@ ProcedureHead ::= KW_PROCEDURE IDENTIFIER:id
 				}
 			}
 			
+			//Set the local scope of the procedure to the scope with params
 			procEntry.setLocalScope(currentScope);
 
             RESULT = procEntry;
@@ -536,22 +538,23 @@ Statement ::= KW_WHILE Condition:c KW_DO Statement:s
        :} 
     | KW_CALL IDENTIFIER:id LPAREN ActualParamList:pl RPAREN
         {: 
-			List<String> paramIds = new ArrayList<String>();
-			
-			for (ExpNode.ActualParameterNode x: pl) {
-				if(paramIds.contains(x.getId())) {
+			List<String> pid = new ArrayList<String>();			
+
+			for (ExpNode.ActualParameterNode x:pl) {
+				if(pid.contains(x.getId())) {
 					errors.error(x.getId() + " repeated", x.getLocation());
 				} else {
-					paramIds.add(x.getId());
+					pid.add(x.getId());
 				}
 			}
 
 			//Edit to fit parameters
-			if (pl.size() > 0) {
+			if (pl.size() != 0) {
             	RESULT = new StatementNode.CallNode( idxleft, id , pl);
-			}	
+			} else {
+           		RESULT = new StatementNode.CallNode( idxleft, id );
+			}
 
-            RESULT = new StatementNode.CallNode( idxleft, id );
         :}
     | KW_RETURN:ret Condition:cond
     	{:
@@ -715,9 +718,19 @@ Factor ::= PLUS Factor:e
     //Calling a thingy
     | IDENTIFIER:id LPAREN ActualParamList:a RPAREN
     	{:
+			List<String> pid = new ArrayList<String>();			
+
+			for (ExpNode.ActualParameterNode x:a) {
+				if(pid.contains(x.getId())) {
+					errors.error(x.getId() + " repeated", x.getLocation());
+				} else {
+					pid.add(x.getId());
+				}
+			}
+
 			//New Stuff
-			if(a.size() > 0) {
-				RESULT = new ExpNode.CallerNode(idxleft, id);
+			if(a.size() != 0) {
+				RESULT = new ExpNode.CallerNode(idxleft, id, a);
 			} else {
 				RESULT = new ExpNode.CallerNode(idxleft, id);
 			}

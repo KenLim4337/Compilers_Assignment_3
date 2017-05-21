@@ -1,4 +1,5 @@
 package tree;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -15,6 +16,7 @@ import syms.Scope;
 import syms.Type;
 import syms.Type.IncompatibleTypes;
 import tree.DeclNode.DeclListNode;
+import tree.ExpNode.ActualParameterNode;
 import tree.StatementNode.*;
 
 /** class StaticSemantics - Performs the static semantic checks on
@@ -63,6 +65,19 @@ public class StaticChecker implements DeclVisitor, StatementVisitor,
         Scope localScope = procEntry.getLocalScope();
         // resolve all references to identifiers with the declarations
         localScope.resolveScope();
+        
+        //Transforms defaults(?)
+        for (SymEntry.ParamEntry x : procEntry.getType().getFormalParams()) {
+            if(!(x.getDefaultExp() == null)) {
+                ExpNode exp = x.getDefaultExp().transform(this);
+                if(exp.getType() instanceof Type.ReferenceType) {
+                    Type nt = exp.getType().optDereferenceType();
+                    nt.coerceExp(exp);
+                }
+                x.setDefaultParam(exp);
+            }
+        }
+        
         // Enter the local scope
         currentScope = localScope;
         // Check the block of the procedure.
@@ -140,6 +155,70 @@ public class StaticChecker implements DeclVisitor, StatementVisitor,
         if( entry instanceof SymEntry.ProcedureEntry ) {
             procEntry = (SymEntry.ProcedureEntry)entry;
             node.setEntry( procEntry );
+            
+            Type.ProcedureType type = procEntry.getType();
+            
+            //Determine if function
+            Type returnType =  type.getResultType();
+            
+            //Error if a function
+            if(!(returnType.equals(Type.VOID_TYPE))) {
+                staticError("cannot call a function from a call statement", node.getLocation());
+            } else {
+                
+                //Otherwise do everything else
+                List<SymEntry.ParamEntry> formalParams = type.getFormalParams();
+                List<ExpNode.ActualParameterNode> actualParams = new ArrayList<ExpNode.ActualParameterNode>();
+                  
+                
+                //Check if any parameter called does not exist in procedure then transform parameters
+                for(ExpNode.ActualParameterNode param: node.getParams()) {
+                    //reset flag, start false, set true if found match
+                    boolean found = false;
+                    
+                    for(SymEntry.ParamEntry sym : formalParams) {
+                        if(sym.getIdent().equals(param.getId())) {
+                            ExpNode.ActualParameterNode newParam = (ExpNode.ActualParameterNode) param.transform(this);
+                            actualParams.add(newParam);
+                            found = true;
+                        } 
+                    }
+                  
+                    //if false, error
+                    
+                    if (found == false) {
+                        //error, not found
+                        staticError("not a parameter of procedure", param.getLocation());
+                    }
+                }   
+
+                    
+                //Check if there is actual param id that doesnt exist in sym param entry
+                for(SymEntry.ParamEntry x : formalParams) {
+                    boolean match = false;
+                    
+                    //Find corresponding actual parameter
+                    for(ExpNode.ActualParameterNode y: actualParams ) {
+                        
+                        if(x.getIdent().equals(y.getId())) {
+                           //Check types
+                           match = true;
+                           x.getType().getBaseType().coerceExp(y.getCondition());
+                        }
+                    }
+                    
+                    //if no match, check default
+                    if (match == false) {
+                        if(x.getDefaultExp() != null) {
+                            node.addParam(new ExpNode.ActualParameterNode(x.getLocation(), x.getIdent(), x.getDefaultExp()));
+                        } else {
+                            staticError("No value for parameter " + x.getIdent(), node.getLocation());
+                        }
+                    }
+                } 
+                
+            }
+            
         } else {
             staticError( "Procedure identifier required", node.getLocation() );
             endCheck("Call");
@@ -151,6 +230,36 @@ public class StaticChecker implements DeclVisitor, StatementVisitor,
     //Return node
     public void visitReturnNode (StatementNode.ReturnNode node) {
         beginCheck("Return");
+        
+        //Find scope return is in
+        SymEntry.ProcedureEntry proc = currentScope.getOwnerEntry();
+        
+        //Transform condition
+        ExpNode exp = node.getCond().transform(this);
+
+        //Dereferences if reference type
+        if (exp.getType() instanceof Type.ReferenceType) {
+            Type nt = exp.getType().optDereferenceType();
+            exp.setType(nt);
+            nt.coerceExp(exp);
+        }
+        
+        
+        //Determine if function
+        Type returnType =  proc.getType().getResultType();
+        
+        //Error if not a function
+        if(returnType.equals(Type.VOID_TYPE)) {
+            staticError("can only return from a function", node.getLocation());
+        } else {
+            //Check if return type matches current procedure return type and coerce to result type
+            proc.getType().getResultType().coerceExp(exp); 
+        }
+        
+        
+        //Set if return type matches
+        node.setCond(exp);
+        
         endCheck("Return");
     }
     
@@ -368,15 +477,117 @@ public class StaticChecker implements DeclVisitor, StatementVisitor,
         return node;
     }
     
+    
+    //What the fuck?
     public ExpNode visitActualParameterNode(ExpNode.ActualParameterNode node) {
         beginCheck("ActualParameter");
-        //Parameter stuff
+        
+        //Transform the condition attached to parameter
+        //System.out.println(node.getCondition().getType());
+        
+        ExpNode exp = node.getCondition().transform(this);
+        node.setCond(exp);
+        
+        //System.out.println(exp.getType());
+        
+        //Dereference type
+        
+        Type condType = node.getCondition().getType();
+        
+        if(condType instanceof Type.ReferenceType) {
+            Type baseType = condType.optDereferenceType();
+            //System.out.println(baseType);
+            exp.setType(condType.optDereferenceType());
+            baseType.coerceExp(exp);
+        }
+        
+        //System.out.println(exp);
+        
         endCheck("ActualParameter");
         return node;
     }
 
+    
     public ExpNode visitCallerNode(ExpNode.CallerNode node) {
         beginCheck("Caller");
+        //Literally same code as call statement, but with type checking cause exp node
+        
+        //Must have a return type
+        SymEntry.ProcedureEntry procEntry = null;
+        // Look up the symbol table entry for the procedure.
+        SymEntry entry = currentScope.lookup( node.getId() );
+        
+        if( entry instanceof SymEntry.ProcedureEntry ) {
+            procEntry = (SymEntry.ProcedureEntry)entry;
+            node.setEntry( procEntry );
+            
+
+            Type.ProcedureType type = procEntry.getType();
+            
+           //Check if function before anything else
+             
+           Type returnType =  type.getResultType();
+            
+           //Error if not a function, sets the type of expression to result type otherwise
+           if(returnType.equals(Type.VOID_TYPE)) {
+               staticError(node.getId() + " should be a function", node.getLocation());
+           } else {
+               node.setType(returnType);
+               
+               List<SymEntry.ParamEntry> formalParams = type.getFormalParams();
+               List<ExpNode.ActualParameterNode> actualParams = new ArrayList<ExpNode.ActualParameterNode>();
+                 
+               //Check if any parameter called does not exist in procedure then transform parameters
+               for(ExpNode.ActualParameterNode param: node.getParams()) {
+                   //reset flag, start false, set true if found match
+                   boolean found = false;
+                   
+                   for(SymEntry.ParamEntry sym : formalParams) {
+                       if(sym.getIdent().equals(param.getId())) {
+                           ExpNode.ActualParameterNode newParam = (ExpNode.ActualParameterNode) param.transform(this);
+                           actualParams.add(newParam);
+                           found = true;
+                       } 
+                   }
+                 
+                   //if false, error
+                   
+                   if (found == false) {
+                       //error, not found
+                       staticError("not a parameter of procedure", param.getLocation());
+                   }
+               }   
+
+                   
+               //Check if there is actual param id that doesnt exist in sym param entry
+               for(SymEntry.ParamEntry x : formalParams) {
+                   boolean match = false;
+                   
+                   //Find corresponding actual parameter
+                   for(ExpNode.ActualParameterNode y: actualParams ) {
+                       
+                       if(x.getIdent().equals(y.getId())) {
+                          //Check types
+                          match = true;
+                          x.getType().getBaseType().coerceExp(y.getCondition());
+                       }
+                   }
+                   
+                   //if no match, check default
+                   if (match == false) {
+                       if(x.getDefaultExp() != null) {
+                           node.addParam(new ExpNode.ActualParameterNode(x.getLocation(), x.getIdent(), x.getDefaultExp()));
+                       } else {
+                           staticError("No value for parameter " + x.getIdent(), node.getLocation());
+                       }
+                   }
+               } 
+           }
+        } else {
+            staticError( "Procedure identifier required", node.getLocation() );
+            endCheck("Caller");
+            return node;
+        }
         
         endCheck("Caller");
         return node;

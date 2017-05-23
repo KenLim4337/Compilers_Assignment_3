@@ -257,6 +257,7 @@ public abstract class StatementNode {
     public static class ReturnNode extends StatementNode {
         
         ExpNode condition;
+        int offset;
         
         public ReturnNode( Location loc, ExpNode cond ) {
             super( loc );
@@ -277,6 +278,14 @@ public abstract class StatementNode {
         
         public void setCond(ExpNode exp) {
             this.condition = exp;
+        }
+        
+        public int getOffset() {
+            return this.offset;
+        }
+        
+        public void setOffset(int off) {
+            this.offset = off;
         }
         
         @Override

@@ -61,6 +61,8 @@ public class StaticChecker implements DeclVisitor, StatementVisitor,
     public void visitProcedureNode(DeclNode.ProcedureNode node) {
         beginCheck("Procedure");
         SymEntry.ProcedureEntry procEntry = node.getProcEntry();
+        
+        
         // Set the current symbol table scope to that for the procedure.
         Scope localScope = procEntry.getLocalScope();
         // resolve all references to identifiers with the declarations
@@ -83,6 +85,9 @@ public class StaticChecker implements DeclVisitor, StatementVisitor,
             
             x.setOffset(offset);
         }
+        
+
+        localScope.allocValueParameterSpace(Math.abs(offset));
         
         // Enter the local scope
         currentScope = localScope;
@@ -240,6 +245,7 @@ public class StaticChecker implements DeclVisitor, StatementVisitor,
         //Find scope return is in
         SymEntry.ProcedureEntry proc = currentScope.getOwnerEntry();
         
+        
         //Transform condition
         ExpNode exp = node.getCond().transform(this);
 
@@ -262,6 +268,8 @@ public class StaticChecker implements DeclVisitor, StatementVisitor,
             proc.getType().getResultType().coerceExp(exp); 
         }
         
+        //Sets offset value to words taken by parameters
+        node.setOffset(currentScope.getValueParameterSpace());
         
         //Set if return type matches
         node.setCond(exp);
@@ -493,8 +501,6 @@ public class StaticChecker implements DeclVisitor, StatementVisitor,
         
         ExpNode exp = node.getCondition().transform(this);
         node.setCond(exp);
-        
-        //System.out.println(exp.getType());
         
         //Dereference type
         

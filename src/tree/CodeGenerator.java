@@ -1,4 +1,5 @@
 package tree;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
@@ -54,7 +55,14 @@ public class CodeGenerator implements DeclVisitor, StatementTransform<Code>,
     public void visitProcedureNode( DeclNode.ProcedureNode node ) {
         beginGen( "Procedure" );
         // Generate code for the block
-        Code code = visitBlockNode( node.getBlock() );
+
+        List<SymEntry.ParamEntry> formalParams = node.getProcEntry().getType().getFormalParams();
+        Collections.reverse(formalParams);
+        
+        Code code = new Code();
+        
+        
+        code.append(visitBlockNode( node.getBlock() ));
         procedures.addProcedure( node.getProcEntry(), code );
         endGen( "Procedure" );
     }
@@ -62,10 +70,12 @@ public class CodeGenerator implements DeclVisitor, StatementTransform<Code>,
     /** Generate code for a block. */
     public Code visitBlockNode( BlockNode node ) {
         beginGen( "Block" );
+        
         /** Generate code to allocate space for local variables on
          * procedure entry.
          */
         Code code = new Code();
+        
         code.genAllocStack( node.getBlockLocals().getVariableSpace() );
         /* Generate the code for the body */
         code.append( node.getBody().genCode( this ) );
@@ -123,12 +133,48 @@ public class CodeGenerator implements DeclVisitor, StatementTransform<Code>,
     public Code visitCallNode( StatementNode.CallNode node ) {
         beginGen( "Call" );
         SymEntry.ProcedureEntry proc = node.getEntry();
+        
+        //Actual Parameters
+        List<ExpNode.ActualParameterNode> actualParams = node.getParams();
+        
+        //Formal Parameters, flipped
+        List<SymEntry.ParamEntry> formalParams = proc.getType().getFormalParams();
+        Collections.reverse(formalParams);
+        
+        Integer paramSize = 0;
+        
         Code code = new Code();
         /* Generate the call instruction. The second parameter is the
          * procedure's symbol table entry. The actual address is resolved 
          * at load time.
          */
+        
+        Code params = new Code();
+        
+        //Load value of corresponding actual param in reverse order
+        for(SymEntry.ParamEntry x:formalParams) {
+            for(ExpNode.ActualParameterNode y: actualParams) {
+                //No dupes or missing params, everything is guaranteed to happen once
+                if(y.getId().equals(x.getIdent())) {
+                    paramSize += y.getCondition().getType().getSpace();
+                    //Generate code for parameter
+                    params.append(y.genCode(this));
+                    
+                }
+            }
+        }
+        
+        code.append(params);
+        //How do link to params
+        
+        
+        //Sets up static link and calls procedure
         code.genCall( staticLevel - proc.getLevel(), proc );
+        
+        
+        //Dealloc space after procedure exit, done
+        code.genDeallocStack(paramSize);
+        
         endGen( "Call" );
         return code;
     }
@@ -137,6 +183,11 @@ public class CodeGenerator implements DeclVisitor, StatementTransform<Code>,
     public Code visitReturnNode( StatementNode.ReturnNode node ) {
         beginGen( "Return" );
         Code code = new Code();
+        
+        //RETURN instruction
+        
+        
+        
         endGen( "Return" );
         return code;
     }
@@ -355,7 +406,7 @@ public class CodeGenerator implements DeclVisitor, StatementTransform<Code>,
         return code;
     }
     
-    //Actual Param Code
+    //Actual Param Code, done
     public Code visitActualParameterNode (ExpNode.ActualParameterNode node) {
         beginGen("ActualParameter");
         //New stuff....or not
@@ -367,7 +418,58 @@ public class CodeGenerator implements DeclVisitor, StatementTransform<Code>,
     
     public Code visitCallerNode(ExpNode.CallerNode node) {
         beginGen ("Caller");
-        Code code  = new Code();
+        
+        SymEntry.ProcedureEntry proc = node.getEntry();
+        //Same code as call but with space allocated for result
+        
+        //Check if result encountered
+        
+        //Actual Parameters
+        List<ExpNode.ActualParameterNode> actualParams = node.getParams();
+        
+        //Formal Parameters, flipped
+        List<SymEntry.ParamEntry> formalParams = proc.getType().getFormalParams();
+        Collections.reverse(formalParams);
+        
+        Integer paramSize = 0;
+        
+        Code code = new Code();
+        /* Generate the call instruction. The second parameter is the
+         * procedure's symbol table entry. The actual address is resolved 
+         * at load time.
+         */
+        
+        //Alloc space for result
+        code.genAllocStack(proc.getType().getResultType().getSpace());
+        
+        Code params = new Code();
+        
+        //Load value of corresponding actual param in reverse order
+        for(SymEntry.ParamEntry x:formalParams) {
+            for(ExpNode.ActualParameterNode y: actualParams) {
+                //No dupes or missing params, everything is guaranteed to happen once
+                if(y.getId().equals(x.getIdent())) {
+                    paramSize += y.getCondition().getType().getSpace();
+                    //Generate code for parameter
+                    params.append(y.genCode(this));
+                    
+                }
+            }
+        }
+        
+        code.append(params);
+        
+        
+        //Sets up static link and calls procedure
+        code.genCall( staticLevel - proc.getLevel(), proc );
+        
+        
+        //Dealloc space after procedure exit, done
+        code.genDeallocStack(paramSize);
+        
+        endGen( "Call" );
+        
+        
         endGen("Caller");
         return code;
     }

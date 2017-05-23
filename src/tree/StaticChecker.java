@@ -66,8 +66,12 @@ public class StaticChecker implements DeclVisitor, StatementVisitor,
         // resolve all references to identifiers with the declarations
         localScope.resolveScope();
         
+        Integer offset = 0;
+        
         //Transforms defaults(?)
         for (SymEntry.ParamEntry x : procEntry.getType().getFormalParams()) {
+            offset -= x.getType().getSpace();
+            
             if(!(x.getDefaultExp() == null)) {
                 ExpNode exp = x.getDefaultExp().transform(this);
                 if(exp.getType() instanceof Type.ReferenceType) {
@@ -76,6 +80,8 @@ public class StaticChecker implements DeclVisitor, StatementVisitor,
                 }
                 x.setDefaultParam(exp);
             }
+            
+            x.setOffset(offset);
         }
         
         // Enter the local scope

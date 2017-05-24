@@ -150,7 +150,7 @@ public class CodeGenerator implements DeclVisitor, StatementTransform<Code>,
             //Actual Parameters
             List<ExpNode.ActualParameterNode> actualParams = node.getParams();
             
-            //Formal Parameters, flipped
+            //Formal Parameters
             List<SymEntry.ParamEntry> formalParams = proc.getType().getFormalParams();
             
             
@@ -442,52 +442,50 @@ public class CodeGenerator implements DeclVisitor, StatementTransform<Code>,
         
         SymEntry.ProcedureEntry proc = node.getEntry();
         //Same code as call but with space allocated for result
-        
-        //Check if result encountered
-        
-        //Actual Parameters
-        List<ExpNode.ActualParameterNode> actualParams = node.getParams();
-        
-        //Formal Parameters, flipped
-        List<SymEntry.ParamEntry> formalParams = proc.getType().getFormalParams();
-        
-        //Breaking things
-        Collections.reverse(formalParams);
-        
-        Integer paramSize = 0;
-        
+
         Code code = new Code();
-        /* Generate the call instruction. The second parameter is the
-         * procedure's symbol table entry. The actual address is resolved 
-         * at load time.
-         */
-        
-        //Alloc space for result
+
+        Integer paramSize = 0;
+        //Check if result encountered
+
+        //Alloc space for result before anything else
         code.genAllocStack(proc.getType().getResultType().getSpace());
         
-        Code params = new Code();
-        
-        //Load value of corresponding actual param in reverse order
-        for( int i = formalParams.size()-1; 0 <= i; i-- ) {
-            for(ExpNode.ActualParameterNode y: actualParams) {
-                //No dupes or missing params, everything is guaranteed to happen once
-                if(y.getId().equals(formalParams.get(i).getIdent())) {
-                    paramSize += y.getCondition().getType().getSpace();
-                    //Generate code for parameter
-                    params.append(y.genCode(this));
+        if (proc.getType().getFormalParams().size() != 0) {
+            //Actual Parameters
+            List<ExpNode.ActualParameterNode> actualParams = node.getParams();
+            
+            //Formal Parameters
+            List<SymEntry.ParamEntry> formalParams = proc.getType().getFormalParams();
+            
+            
+            Code params = new Code();
+            
+            //Load value of corresponding actual param in reverse order
+            for( int i = formalParams.size()-1; 0 <= i; i-- ) {
+                for(ExpNode.ActualParameterNode y: actualParams) {
+                    //No dupes or missing params, everything is guaranteed to happen once
+                    if(y.getId().equals(formalParams.get(i).getIdent())) {
+                        paramSize += y.getCondition().getType().getSpace();
+                        //Generate code for parameter
+                        params.append(y.genCode(this));
+                    }
                 }
             }
+            
+            code.append(params);
+        
         }
         
-        code.append(params);
-        
-        
+
         //Sets up static link and calls procedure
         code.genCall( staticLevel - proc.getLevel(), proc );
         
         
         //Dealloc space after procedure exit, done
-        code.genDeallocStack(paramSize);
+        if(paramSize > 0) {
+            code.genDeallocStack(paramSize);
+        }
         
         
         endGen("Caller");

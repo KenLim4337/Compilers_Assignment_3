@@ -82,7 +82,6 @@ public class StaticChecker implements DeclVisitor, StatementVisitor,
                 }
                 x.setDefaultParam(exp);
             }
-            
             x.setOffset(offset);
         }
         
@@ -250,6 +249,8 @@ public class StaticChecker implements DeclVisitor, StatementVisitor,
         //Transform condition
         ExpNode exp = node.getCond().transform(this);
 
+
+        
         
         //Offset
         Integer offset = 0;
@@ -273,6 +274,7 @@ public class StaticChecker implements DeclVisitor, StatementVisitor,
             //Check if return type matches current procedure return type and coerce to result type
             proc.getType().getResultType().coerceExp(exp); 
         }
+        
         
         offset -= currentScope.getValueParameterSpace();
         offset -= proc.getType().getResultType().getSpace();
@@ -535,11 +537,11 @@ public class StaticChecker implements DeclVisitor, StatementVisitor,
         SymEntry entry = currentScope.lookup( node.getId() );
         
         if( entry instanceof SymEntry.ProcedureEntry ) {
-            procEntry = (SymEntry.ProcedureEntry)entry;
-            node.setEntry( procEntry );
+           procEntry = (SymEntry.ProcedureEntry)entry;
+           node.setEntry( procEntry );
             
 
-            Type.ProcedureType type = procEntry.getType();
+           Type.ProcedureType type = procEntry.getType();
             
            //Check if function before anything else
              

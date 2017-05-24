@@ -178,7 +178,8 @@ public class StaticChecker implements DeclVisitor, StatementVisitor,
                 
                 //Otherwise do everything else
                 List<SymEntry.ParamEntry> formalParams = type.getFormalParams();
-                List<ExpNode.ActualParameterNode> actualParams = new ArrayList<ExpNode.ActualParameterNode>();
+                List<ExpNode.ActualParameterNode> actualParams = 
+                        new ArrayList<ExpNode.ActualParameterNode>();
                   
                 
                 //Check if any parameter called does not exist in procedure then transform parameters
@@ -188,8 +189,11 @@ public class StaticChecker implements DeclVisitor, StatementVisitor,
                     
                     for(SymEntry.ParamEntry sym : formalParams) {
                         if(sym.getIdent().equals(param.getId())) {
-                            ExpNode.ActualParameterNode newParam = (ExpNode.ActualParameterNode) param.transform(this);
-                            ExpNode newCond = sym.getType().optDereferenceType().coerceExp(newParam.getCondition());  
+                            ExpNode.ActualParameterNode newParam = 
+                                    (ExpNode.ActualParameterNode) param.transform(this);
+                            ExpNode newCond = 
+                                    sym.getType().optDereferenceType().coerceExp(
+                                            newParam.getCondition());  
                             newParam.setCond(newCond);
                             actualParams.add(newParam);
                             found = true;
@@ -222,7 +226,8 @@ public class StaticChecker implements DeclVisitor, StatementVisitor,
                     //if no match, check default
                     if (match == false) {
                         if(x.getDefaultExp() != null) {
-                            node.addParam(new ExpNode.ActualParameterNode(x.getLocation(), x.getIdent(), x.getDefaultExp()));
+                            node.addParam(new ExpNode.ActualParameterNode(
+                                    x.getLocation(), x.getIdent(), x.getDefaultExp()));
                         } else {
                             staticError("No value for parameter " + x.getIdent(), node.getLocation());
                         }
@@ -554,16 +559,18 @@ public class StaticChecker implements DeclVisitor, StatementVisitor,
                node.setType(returnType);
                
                List<SymEntry.ParamEntry> formalParams = type.getFormalParams();
-               List<ExpNode.ActualParameterNode> actualParams = new ArrayList<ExpNode.ActualParameterNode>();
+               List<ExpNode.ActualParameterNode> actualParams = 
+                       new ArrayList<ExpNode.ActualParameterNode>();
                  
-               //Check if any parameter called does not exist in procedure then transform parameters
+            //Check if any parameter called does not exist in procedure then transform parameters
                for(ExpNode.ActualParameterNode param: node.getParams()) {
                    //reset flag, start false, set true if found match
                    boolean found = false;
                    
                    for(SymEntry.ParamEntry sym : formalParams) {
                        if(sym.getIdent().equals(param.getId())) {
-                           ExpNode.ActualParameterNode newParam = (ExpNode.ActualParameterNode) param.transform(this);
+                           ExpNode.ActualParameterNode newParam = 
+                                   (ExpNode.ActualParameterNode) param.transform(this);
                            actualParams.add(newParam);
                            found = true;
                        } 
@@ -595,9 +602,12 @@ public class StaticChecker implements DeclVisitor, StatementVisitor,
                    //if no match, check default
                    if (match == false) {
                        if(x.getDefaultExp() != null) {
-                           node.addParam(new ExpNode.ActualParameterNode(x.getLocation(), x.getIdent(), x.getDefaultExp()));
+                           node.addParam(
+                                   new ExpNode.ActualParameterNode(
+                                           x.getLocation(), x.getIdent(), x.getDefaultExp()));
                        } else {
-                           staticError("No value for parameter " + x.getIdent(), node.getLocation());
+                           staticError("No value for parameter " + 
+                                   x.getIdent(), node.getLocation());
                        }
                    }
                } 

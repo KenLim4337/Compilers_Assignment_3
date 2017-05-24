@@ -77,7 +77,8 @@ public class CodeGenerator implements DeclVisitor, StatementTransform<Code>,
         code.append( node.getBody().genCode( this ) );
         
         
-        //Make so that this only generates return for non functions?, relies on a return statement being present for return
+        //Make so that this only generates return for non functions?
+        //, relies on a return statement being present for return
         Type retType = node.getBlockLocals().getOwnerEntry().getType().getResultType();
         
         if (retType.equals(Type.VOID_TYPE)) {

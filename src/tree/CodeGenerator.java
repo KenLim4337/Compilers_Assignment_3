@@ -55,9 +55,6 @@ public class CodeGenerator implements DeclVisitor, StatementTransform<Code>,
     public void visitProcedureNode( DeclNode.ProcedureNode node ) {
         beginGen( "Procedure" );
         // Generate code for the block
-
-        List<SymEntry.ParamEntry> formalParams = node.getProcEntry().getType().getFormalParams();
-        Collections.reverse(formalParams);
         
         Code code = new Code();
         
@@ -155,7 +152,6 @@ public class CodeGenerator implements DeclVisitor, StatementTransform<Code>,
             
             //Formal Parameters, flipped
             List<SymEntry.ParamEntry> formalParams = proc.getType().getFormalParams();
-            Collections.reverse(formalParams);
             
             
             /* Generate the call instruction. The second parameter is the
@@ -166,17 +162,18 @@ public class CodeGenerator implements DeclVisitor, StatementTransform<Code>,
             Code params = new Code();
             
             //Load value of corresponding actual param in reverse order
-            for(SymEntry.ParamEntry x:formalParams) {
+            
+            for( int i = formalParams.size()-1; 0 <= i; i-- ) {
                 for(ExpNode.ActualParameterNode y: actualParams) {
                     //No dupes or missing params, everything is guaranteed to happen once
-                    if(y.getId().equals(x.getIdent())) {
+                    if(y.getId().equals(formalParams.get(i).getIdent())) {
                         paramSize += y.getCondition().getType().getSpace();
                         //Generate code for parameter
                         params.append(y.genCode(this));
-                        
                     }
                 }
             }
+            
             
             code.append(params);
             
@@ -453,6 +450,8 @@ public class CodeGenerator implements DeclVisitor, StatementTransform<Code>,
         
         //Formal Parameters, flipped
         List<SymEntry.ParamEntry> formalParams = proc.getType().getFormalParams();
+        
+        //Breaking things
         Collections.reverse(formalParams);
         
         Integer paramSize = 0;
@@ -469,14 +468,13 @@ public class CodeGenerator implements DeclVisitor, StatementTransform<Code>,
         Code params = new Code();
         
         //Load value of corresponding actual param in reverse order
-        for(SymEntry.ParamEntry x:formalParams) {
+        for( int i = formalParams.size()-1; 0 <= i; i-- ) {
             for(ExpNode.ActualParameterNode y: actualParams) {
                 //No dupes or missing params, everything is guaranteed to happen once
-                if(y.getId().equals(x.getIdent())) {
+                if(y.getId().equals(formalParams.get(i).getIdent())) {
                     paramSize += y.getCondition().getType().getSpace();
                     //Generate code for parameter
                     params.append(y.genCode(this));
-                    
                 }
             }
         }

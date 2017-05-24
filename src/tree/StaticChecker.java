@@ -190,6 +190,8 @@ public class StaticChecker implements DeclVisitor, StatementVisitor,
                     for(SymEntry.ParamEntry sym : formalParams) {
                         if(sym.getIdent().equals(param.getId())) {
                             ExpNode.ActualParameterNode newParam = (ExpNode.ActualParameterNode) param.transform(this);
+                            ExpNode newCond = sym.getType().optDereferenceType().coerceExp(newParam.getCondition());  
+                            newParam.setCond(newCond);
                             actualParams.add(newParam);
                             found = true;
                         } 
@@ -245,10 +247,10 @@ public class StaticChecker implements DeclVisitor, StatementVisitor,
         //Find scope return is in
         SymEntry.ProcedureEntry proc = currentScope.getOwnerEntry();
         
-        
         //Transform condition
         ExpNode exp = node.getCond().transform(this);
 
+        
         //Offset
         Integer offset = 0;
         
@@ -262,6 +264,7 @@ public class StaticChecker implements DeclVisitor, StatementVisitor,
         
         //Determine if function
         Type returnType =  proc.getType().getResultType();
+        
         
         //Error if not a function
         if(returnType.equals(Type.VOID_TYPE)) {
@@ -498,15 +501,12 @@ public class StaticChecker implements DeclVisitor, StatementVisitor,
     }
     
     
-    //What the fuck?
     public ExpNode visitActualParameterNode(ExpNode.ActualParameterNode node) {
         beginCheck("ActualParameter");
         
         //Transform the condition attached to parameter
-        //System.out.println(node.getCondition().getType());
         
         ExpNode exp = node.getCondition().transform(this);
-        node.setCond(exp);
         
         //Dereference type
         
@@ -514,12 +514,11 @@ public class StaticChecker implements DeclVisitor, StatementVisitor,
         
         if(condType instanceof Type.ReferenceType) {
             Type baseType = condType.optDereferenceType();
-            //System.out.println(baseType);
             exp.setType(condType.optDereferenceType());
             baseType.coerceExp(exp);
         }
-        
-        //System.out.println(exp);
+
+        node.setCond(exp);
         
         endCheck("ActualParameter");
         return node;

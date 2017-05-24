@@ -883,7 +883,7 @@ class CUP$CUPParser$actions {
 			nt.setFormalParams(pl);			
 
 			 /* Add an entry for the procedure to the current scope */
-            procEntry = currentScope.addProcedure( id, idxleft , nt);
+            procEntry = currentScope.addProcedure( id, idxleft );
 			
             if( procEntry == null ) {
                 errors.error( id + " already declared", idxleft );
@@ -896,16 +896,25 @@ class CUP$CUPParser$actions {
             /* Create a new scope for the symbols local to
              * the procedure. */
             currentScope = currentScope.newScope( procEntry );
-	
+
+			List<SymEntry.ParamEntry> params = new ArrayList<SymEntry.ParamEntry>();
+
 			//Add formal param entries into the current scope (in procEntry) using addEntry
 			for(SymEntry sym: pl) {
 				SymEntry addParam;
 				addParam = currentScope.addEntry(sym);
 				if(addParam == null) {
 					errors.error(sym.getIdent() + " repeated", sym.getLocation());
+					
+				} else {
+					params.add((SymEntry.ParamEntry)sym);
 				}
 			}
 			
+			nt.setFormalParams(params);
+
+			procEntry.setType(nt);
+
 			//Set the local scope of the procedure to the scope with params
 			procEntry.setLocalScope(currentScope);
 

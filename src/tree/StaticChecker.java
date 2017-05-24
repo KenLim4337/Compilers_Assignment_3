@@ -249,6 +249,9 @@ public class StaticChecker implements DeclVisitor, StatementVisitor,
         //Transform condition
         ExpNode exp = node.getCond().transform(this);
 
+        //Offset
+        Integer offset = 0;
+        
         //Dereferences if reference type
         if (exp.getType() instanceof Type.ReferenceType) {
             Type nt = exp.getType().optDereferenceType();
@@ -268,8 +271,11 @@ public class StaticChecker implements DeclVisitor, StatementVisitor,
             proc.getType().getResultType().coerceExp(exp); 
         }
         
+        offset -= currentScope.getValueParameterSpace();
+        offset -= proc.getType().getResultType().getSpace();
+        
         //Sets offset value to words taken by parameters
-        node.setOffset(currentScope.getValueParameterSpace());
+        node.setOffset(offset);
         
         //Set if return type matches
         node.setCond(exp);

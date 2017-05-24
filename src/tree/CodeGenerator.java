@@ -61,7 +61,6 @@ public class CodeGenerator implements DeclVisitor, StatementTransform<Code>,
         
         Code code = new Code();
         
-        
         code.append(visitBlockNode( node.getBlock() ));
         procedures.addProcedure( node.getProcEntry(), code );
         endGen( "Procedure" );
@@ -81,7 +80,7 @@ public class CodeGenerator implements DeclVisitor, StatementTransform<Code>,
         code.append( node.getBody().genCode( this ) );
         
         
-        //Make so that this only generates return for non functions?
+        //Make so that this only generates return for non functions?, relies on a return statement being present for return
         Type retType = node.getBlockLocals().getOwnerEntry().getType().getResultType();
         
         if (retType.equals(Type.VOID_TYPE)) {
@@ -204,6 +203,10 @@ public class CodeGenerator implements DeclVisitor, StatementTransform<Code>,
         code.append(node.getCond().genCode(this));
         
         //Jump to space allocated by function?
+        //Put value, put offset, storeframe, return
+        code.genLoadConstant(node.getOffset());
+        
+        code.generateOp(Operation.STORE_FRAME);
         
         //Allocate return here?
         code.generateOp(Operation.RETURN);
